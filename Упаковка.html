@@ -1504,34 +1504,70 @@
             }
 
             /**
-             * Add empty sales forecast sheet
+             * Add sales forecast sheet with calculated data
              */
             _addEmptySalesForecastSheet(workbook) {
+                const weeksWindow = Math.min(
+                    parseInt(document.getElementById('maWindow').value) || CONFIG.DEFAULT_MA_WINDOW,
+                    52
+                );
+                const startWeek = parseInt(document.getElementById('startWeek').value) || 1;
+                const forecastWeeks = parseInt(document.getElementById('forecastWeeks').value) || 4;
+
+                const forecast = this.calculator.calculate(weeksWindow, startWeek, forecastWeeks);
+
                 const weekHeaders = [];
-                for (let i = 1; i <= 9; i++) {
-                    weekHeaders.push(`Week ${String(i).padStart(2, '0')}`);
+                for (let w = 0; w < forecast.numWeeks; w++) {
+                    weekHeaders.push(`Week ${forecast.startWeek + w}`);
                 }
 
                 const data = [
-                    ['CW', 'Month', ...weekHeaders]
+                    ['', '', ...weekHeaders]
                 ];
+
+                for (let packIdx = 0; packIdx < forecast.results.length; packIdx++) {
+                    const row = ['', ''];
+                    for (let w = 0; w < forecast.numWeeks; w++) {
+                        const weekForecast = forecast.weeklyForecasts[w][packIdx];
+                        row.push(Math.round(weekForecast.forecastConsumption || 0));
+                    }
+                    data.push(row);
+                }
 
                 const sheet = XLSX.utils.aoa_to_sheet(data);
                 XLSX.utils.book_append_sheet(workbook, sheet, 'Прогноз_продаж');
             }
 
             /**
-             * Add empty purchase forecast sheet
+             * Add purchase forecast sheet with calculated data
              */
             _addEmptyPurchaseForecastSheet(workbook) {
+                const weeksWindow = Math.min(
+                    parseInt(document.getElementById('maWindow').value) || CONFIG.DEFAULT_MA_WINDOW,
+                    52
+                );
+                const startWeek = parseInt(document.getElementById('startWeek').value) || 1;
+                const forecastWeeks = parseInt(document.getElementById('forecastWeeks').value) || 4;
+
+                const forecast = this.calculator.calculate(weeksWindow, startWeek, forecastWeeks);
+
                 const weekHeaders = [];
-                for (let i = 1; i <= 9; i++) {
-                    weekHeaders.push(`Week ${String(i).padStart(2, '0')}`);
+                for (let w = 0; w < forecast.numWeeks; w++) {
+                    weekHeaders.push(`Week ${forecast.startWeek + w}`);
                 }
 
                 const data = [
-                    ['CW', 'Month', ...weekHeaders]
+                    ['', '', ...weekHeaders]
                 ];
+
+                for (let packIdx = 0; packIdx < forecast.results.length; packIdx++) {
+                    const row = ['', ''];
+                    for (let w = 0; w < forecast.numWeeks; w++) {
+                        const weekForecast = forecast.weeklyForecasts[w][packIdx];
+                        row.push(Math.round(weekForecast.purchaseAmount || 0));
+                    }
+                    data.push(row);
+                }
 
                 const sheet = XLSX.utils.aoa_to_sheet(data);
                 XLSX.utils.book_append_sheet(workbook, sheet, 'Прогноз_закупок');
