@@ -1445,6 +1445,8 @@
                 this._addConsumptionSheet(workbook);
                 this._addStocksSheet(workbook);
                 this._addMinSheet(workbook);
+                this._addEmptySalesForecastSheet(workbook);
+                this._addEmptyPurchaseForecastSheet(workbook);
                 this._addForecastSheet(workbook);
                 this._addParametersSheet(workbook);
 
@@ -1502,6 +1504,40 @@
             }
 
             /**
+             * Add empty sales forecast sheet
+             */
+            _addEmptySalesForecastSheet(workbook) {
+                const weekHeaders = [];
+                for (let i = 1; i <= 9; i++) {
+                    weekHeaders.push(`Week ${String(i).padStart(2, '0')}`);
+                }
+
+                const data = [
+                    ['CW', 'Month', ...weekHeaders]
+                ];
+
+                const sheet = XLSX.utils.aoa_to_sheet(data);
+                XLSX.utils.book_append_sheet(workbook, sheet, 'Прогноз_продаж');
+            }
+
+            /**
+             * Add empty purchase forecast sheet
+             */
+            _addEmptyPurchaseForecastSheet(workbook) {
+                const weekHeaders = [];
+                for (let i = 1; i <= 9; i++) {
+                    weekHeaders.push(`Week ${String(i).padStart(2, '0')}`);
+                }
+
+                const data = [
+                    ['CW', 'Month', ...weekHeaders]
+                ];
+
+                const sheet = XLSX.utils.aoa_to_sheet(data);
+                XLSX.utils.book_append_sheet(workbook, sheet, 'Прогноз_закупок');
+            }
+
+            /**
              * Add forecast sheet
              */
             _addForecastSheet(workbook) {
@@ -1511,7 +1547,7 @@
                 );
                 const startWeek = parseInt(document.getElementById('startWeek').value) || 1;
                 const forecastWeeks = parseInt(document.getElementById('forecastWeeks').value) || 4;
-                
+
                 const forecast = this.calculator.calculate(weeksWindow, startWeek, forecastWeeks);
                 
                 const weekHeaders = [];
