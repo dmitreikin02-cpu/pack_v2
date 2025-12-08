@@ -33,16 +33,16 @@
             padding: 30px;
             text-align: center;
         }
-        
-        .header h1 {
-            font-size: 2em;
-            margin-bottom: 10px;
-        }
-        
-        .header p {
-            opacity: 0.9;
-            font-size: 1.1em;
-        }
+
+        .header h1 {
+            font-size: 1.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
         
         .content {
             padding: 30px;
@@ -417,24 +417,23 @@
             </div>
             
             <div class="section">
-                <h2>Результаты прогноза</h2>
-                <div id="forecastInfo" style="margin-bottom: 20px; padding: 15px; background: #e7f3ff; border-left: 4px solid #2196F3; border-radius: 5px; display: none;">
-                    <strong>📊 Прогноз на недели: <span id="weekRange"></span></strong>
-                </div>
-                <div class="stats-grid" id="statsGrid"></div>
+                <h2>Минимальные запасы</h2>
+                <p style="margin-top: 10px; margin-bottom: 15px; color: #6c757d; font-size: 0.95em;">
+                    Отредактируйте минимальные запасы по видам упаковки (значения загружаются из файла)
+                </p>
                 <div class="table-container">
                     <table>
-                        <thead id="resultHeader">
+                        <thead>
                             <tr>
                                 <th>Тип упаковки</th>
-                                <th>Текущий остаток</th>
-                                <th>Средний расход/неделя</th>
+                                <th>Минимальный запас</th>
+                                <th>Минимальная партия закупки</th>
                             </tr>
                         </thead>
-                        <tbody id="resultBody">
+                        <tbody id="minimumStockBody">
                             <tr>
                                 <td colspan="3" style="text-align: center; color: #6c757d; padding: 40px;">
-                                    Загрузите данные Excel (листы: Расход, Запасы, Min) для расчёта прогноза
+                                    Загрузите данные Excel для отображения минимальных запасов
                                 </td>
                             </tr>
                         </tbody>
@@ -1336,6 +1335,26 @@
             }
 
             /**
+             * Render minimum stock table
+             */
+            renderMinimumStocks(minimums, purchaseBatches) {
+                const fragment = document.createDocumentFragment();
+
+                for (let i = 0; i < CONFIG.PACK_TYPES.length; i++) {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td><strong>${CONFIG.PACK_TYPES[i].replace(/\n/g, '<br>')}</strong></td>
+                        <td><input type="number" class="min-stock-input" data-index="${i}" value="${minimums[i]}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;"></td>
+                        <td><input type="number" class="purchase-batch-input" data-index="${i}" value="${purchaseBatches[i]}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;"></td>
+                    `;
+                    fragment.appendChild(tr);
+                }
+
+                this.elements.minimumStockBody.innerHTML = '';
+                this.elements.minimumStockBody.appendChild(fragment);
+            }
+
+            /**
              * Reset form inputs
              */
             resetInputs() {
@@ -1619,7 +1638,9 @@
                             `Файл загружен успешно! Недель расхода: ${result.consumptionWeeks}, недель остатков: ${result.stocksWeeks}.${minInfo}`,
                             'success'
                         );
-                        
+
+                        this.uiManager.renderMinimumStocks(this.dataManager.minimums, this.dataManager.purchaseBatches);
+
                         this.handleCalculateForecast();
                     } catch (err) {
                         this.uiManager.showAlert(`Ошибка загрузки файла: ${err.message}`, 'error');
