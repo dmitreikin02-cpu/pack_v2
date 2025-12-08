@@ -440,8 +440,34 @@
                     </table>
                 </div>
             </div>
-        </div>
-    </div>
+
+            <div class="section" style="display: none;">
+                <h2>Результаты прогноза</h2>
+                <div id="forecastInfo" style="margin-bottom: 20px; padding: 15px; background: #e7f3ff; border-left: 4px solid #2196F3; border-radius: 5px; display: none;">
+                    <strong>📊 Прогноз на недели: <span id="weekRange"></span></strong>
+                </div>
+                <div class="stats-grid" id="statsGrid"></div>
+                <div class="table-container">
+                    <table>
+                        <thead id="resultHeader">
+                            <tr>
+                                <th>Тип упаковки</th>
+                                <th>Текущий остаток</th>
+                                <th>Средний расход/неделя</th>
+                            </tr>
+                        </thead>
+                        <tbody id="resultBody">
+                            <tr>
+                                <td colspan="3" style="text-align: center; color: #6c757d; padding: 40px;">
+                                    Загрузите данные Excel (листы: Расход, Запасы, Min) для расчёта прогноза
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            </div>
+            </div>
 
     <script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script>
@@ -1181,7 +1207,7 @@
              * Cache frequently used DOM elements
              */
             _cacheElements() {
-                return {
+                const cached = {
                     alertBox: document.getElementById('alertBox'),
                     fileInput: document.getElementById('fileInput'),
                     maWindow: document.getElementById('maWindow'),
@@ -1195,6 +1221,13 @@
                     forecastInfo: document.getElementById('forecastInfo'),
                     weekRange: document.getElementById('weekRange')
                 };
+
+                const minimumStockBody = document.getElementById('minimumStockBody');
+                if (minimumStockBody) {
+                    cached.minimumStockBody = minimumStockBody;
+                }
+
+                return cached;
             }
 
             /**
