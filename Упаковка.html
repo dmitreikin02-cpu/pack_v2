@@ -1435,22 +1435,24 @@
                 if (typeof XLSX === 'undefined') {
                     throw new Error('Библиотека XLSX не загружена. Проверьте подключение к интернету.');
                 }
-                
+
                 if (!this.dataManager.weeklyConsumption.length && !this.dataManager.weeklyStocks.length) {
                     throw new Error('Нет данных для экспорта. Загрузите файл или добавьте данные.');
                 }
-                
+
                 const workbook = XLSX.utils.book_new();
-                
+
                 this._addConsumptionSheet(workbook);
                 this._addStocksSheet(workbook);
                 this._addMinSheet(workbook);
+                this._addSalesForecastSheet(workbook);
+                this._addPurchaseForecastSheet(workbook);
                 this._addForecastSheet(workbook);
                 this._addParametersSheet(workbook);
-                
+
                 const fileName = `Packaging_Forecast_${new Date().toISOString().split('T')[0]}.xlsx`;
                 XLSX.writeFile(workbook, fileName);
-                
+
                 return fileName;
             }
 
@@ -1496,9 +1498,79 @@
                         this.dataManager.purchaseBatches[i]
                     ])
                 ];
-                
+
                 const sheet = XLSX.utils.aoa_to_sheet(data);
                 XLSX.utils.book_append_sheet(workbook, sheet, 'Min');
+            }
+
+            /**
+             * Add sales forecast sheet
+             */
+            _addSalesForecastSheet(workbook) {
+                const weeksWindow = Math.min(
+                    parseInt(document.getElementById('maWindow').value) || CONFIG.DEFAULT_MA_WINDOW,
+                    52
+                );
+                const startWeek = parseInt(document.getElementById('startWeek').value) || 1;
+                const forecastWeeks = parseInt(document.getElementById('forecastWeeks').value) || 4;
+
+                const forecast = this.calculator.calculate(weeksWindow, startWeek, forecastWeeks);
+
+                const weekHeaders = [];
+                for (let w = 0; w < forecast.numWeeks; w++) {
+                    weekHeaders.push(`Week ${String(forecast.startWeek + w).padStart(2, '0')}`);
+                }
+
+                const data = [
+                    ['CW', 'Month', ...weekHeaders]
+                ];
+
+                for (let packIdx = 0; packIdx < forecast.results.length; packIdx++) {
+                    const row = [packIdx + 1, 1];
+                    for (let w = 0; w < forecast.numWeeks; w++) {
+                        const weekForecast = forecast.weeklyForecasts[w][packIdx];
+                        row.push(Math.round(weekForecast.expectedConsumption || 0));
+                    }
+                    data.push(row);
+                }
+
+                const sheet = XLSX.utils.aoa_to_sheet(data);
+                XLSX.utils.book_append_sheet(workbook, sheet, 'Прогноз_продаж');
+            }
+
+            /**
+             * Add purchase forecast sheet
+             */
+            _addPurchaseForecastSheet(workbook) {
+                const weeksWindow = Math.min(
+                    parseInt(document.getElementById('maWindow').value) || CONFIG.DEFAULT_MA_WINDOW,
+                    52
+                );
+                const startWeek = parseInt(document.getElementById('startWeek').value) || 1;
+                const forecastWeeks = parseInt(document.getElementById('forecastWeeks').value) || 4;
+
+                const forecast = this.calculator.calculate(weeksWindow, startWeek, forecastWeeks);
+
+                const weekHeaders = [];
+                for (let w = 0; w < forecast.numWeeks; w++) {
+                    weekHeaders.push(`Week ${String(forecast.startWeek + w).padStart(2, '0')}`);
+                }
+
+                const data = [
+                    ['CW', 'Month', ...weekHeaders]
+                ];
+
+                for (let packIdx = 0; packIdx < forecast.results.length; packIdx++) {
+                    const row = [packIdx + 1, 1];
+                    for (let w = 0; w < forecast.numWeeks; w++) {
+                        const weekForecast = forecast.weeklyForecasts[w][packIdx];
+                        row.push(Math.round(weekForecast.purchaseAmount || 0));
+                    }
+                    data.push(row);
+                }
+
+                const sheet = XLSX.utils.aoa_to_sheet(data);
+                XLSX.utils.book_append_sheet(workbook, sheet, 'Прогноз_закупок');
             }
 
             /**
