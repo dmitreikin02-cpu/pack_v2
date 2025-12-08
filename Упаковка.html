@@ -1,0 +1,1717 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Прогноз Закупок Материалов</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .section {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 25px;
+            border: 2px solid #e9ecef;
+        }
+        
+        .section h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .section h2::before {
+            content: '📊';
+            font-size: 1.2em;
+        }
+        
+        .upload-area {
+            border: 3px dashed #667eea;
+            border-radius: 10px;
+            padding: 30px;
+            text-align: center;
+            background: white;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        
+        .upload-area:hover {
+            border-color: #764ba2;
+            background: #f8f9fa;
+        }
+        
+        .upload-area input[type="file"] {
+            display: none;
+        }
+        
+        .upload-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 600;
+            transition: transform 0.2s;
+        }
+        
+        .upload-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .form-group label {
+            color: #495057;
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 0.9em;
+        }
+        
+        .form-group input {
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: border-color 0.3s;
+        }
+        
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .form-group input.error {
+            border-color: #dc3545;
+        }
+        
+        .btn-group {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+        
+        .btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 600;
+            transition: all 0.3s;
+            flex: 1;
+            min-width: 150px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .table-container {
+            overflow-x: auto;
+            margin-top: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+        }
+        
+        th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.9em;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        td {
+            padding: 15px;
+            border-bottom: 1px solid #e9ecef;
+            font-size: 0.95em;
+        }
+        
+        tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .status-ok {
+            background: #d4edda !important;
+            color: #155724;
+        }
+        
+        .status-warning {
+            background: #fff3cd !important;
+            color: #856404;
+        }
+        
+        .status-danger {
+            background: #f8d7da !important;
+            color: #721c24;
+        }
+        
+        .badge {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.85em;
+            display: inline-block;
+        }
+        
+        .badge-ok {
+            background: #28a745;
+            color: white;
+        }
+        
+        .badge-warning {
+            background: #ffc107;
+            color: #000;
+        }
+        
+        .badge-danger {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-left: 4px solid #667eea;
+        }
+        
+        .stat-card h3 {
+            color: #6c757d;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+        
+        .stat-card .value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .alert {
+            padding: 15px 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        
+        .alert.show {
+            display: block;
+        }
+        
+        .alert-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border-left: 4px solid #17a2b8;
+        }
+        
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border-left: 4px solid #28a745;
+        }
+        
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border-left: 4px solid #dc3545;
+        }
+        
+        @media (max-width: 768px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .btn-group {
+                flex-direction: column;
+            }
+            
+            .btn {
+                width: 100%;
+            }
+            
+            .header h1 {
+                font-size: 1.5em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📦 Прогноз Закупок Материалов</h1>
+            <p>Анализ расхода и автоматический прогноз потребности в упаковочных материалах</p>
+        </div>
+        
+        <div class="content">
+            <div id="alertBox" class="alert"></div>
+            
+            <div class="section">
+                <h2>Загрузка данных</h2>
+                <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+                    <p style="font-size: 3em; margin-bottom: 10px;">📁</p>
+                    <p style="font-size: 1.2em; margin-bottom: 10px;">Нажмите для загрузки Excel файла</p>
+                    <p style="color: #6c757d;">Файл должен содержать 3 листа: "Расход" (потребление), "Запасы" (остатки), "Min" (минимумы)</p>
+                    <input type="file" id="fileInput" accept=".xlsx">
+                </div>
+            </div>
+            
+            <div class="section" style="display: none;">
+                <h2>Добавить данные за неделю</h2>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Номер недели (CW)</label>
+                        <input type="number" id="weekInput" min="1" max="53" value="1">
+                    </div>
+                    <div class="form-group">
+                        <label>Месяц</label>
+                        <input type="number" id="monthInput" min="1" max="12" value="1">
+                    </div>
+                </div>
+                <div class="btn-group">
+                    <button class="btn btn-primary" onclick="app.handleAddWeeklyData()">➕ Добавить данные</button>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h2>Параметры прогноза</h2>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Окно анализа (недель)</label>
+                        <input type="number" id="maWindow" value="8" min="1" max="52">
+                    </div>
+                    <div class="form-group">
+                        <label>Начальная неделя прогноза (CW)</label>
+                        <input type="number" id="startWeek" value="1" min="1" max="53">
+                    </div>
+                    <div class="form-group">
+                        <label>Количество недель прогноза</label>
+                        <input type="number" id="forecastWeeks" value="4" min="1" max="12">
+                    </div>
+                    <div class="form-group">
+                        <label>Метод прогнозирования</label>
+                        <select id="forecastMethod">
+                            <option value="sma">SMA (Простое среднее)</option>
+                            <option value="ema">EMA (Экспоненциальное сглаживание)</option>
+                            <option value="wma">WMA (Взвешенное среднее)</option>
+                            <option value="trend">Тренд (Линейная регрессия)</option>
+                            <option value="hybrid" selected>Гибридный (Рекомендуется)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Страховой запас (%)</label>
+                        <input type="number" id="safetyStock" value="20" min="0" max="100" step="5">
+                    </div>
+                </div>
+                
+                <p style="margin-top: 20px; color: #6c757d; font-size: 0.95em;">
+                    ℹ️ Текущие остатки и минимумы загружаются автоматически из Excel файла (листы "Запасы" и "Min")
+                </p>
+                <p style="margin-top: 10px; color: #495057; font-size: 0.9em;">
+                    📅 Гибридный метод комбинирует несколько алгоритмов для максимальной точности + ROP (точка заказа)
+                </p>
+                
+                <div class="btn-group">
+                    <button class="btn btn-primary" onclick="app.handleCalculateForecast()">🔄 Рассчитать прогноз</button>
+                    <button class="btn btn-secondary" onclick="app.handleReset()">🔄 Сбросить</button>
+                    <button class="btn btn-success" onclick="app.handleDownloadReport()">💾 Скачать отчёт</button>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h2>Результаты прогноза</h2>
+                <div id="forecastInfo" style="margin-bottom: 20px; padding: 15px; background: #e7f3ff; border-left: 4px solid #2196F3; border-radius: 5px; display: none;">
+                    <strong>📊 Прогноз на недели: <span id="weekRange"></span></strong>
+                </div>
+                <div class="stats-grid" id="statsGrid"></div>
+                <div class="table-container">
+                    <table>
+                        <thead id="resultHeader">
+                            <tr>
+                                <th>Тип упаковки</th>
+                                <th>Текущий остаток</th>
+                                <th>Средний расход/неделя</th>
+                            </tr>
+                        </thead>
+                        <tbody id="resultBody">
+                            <tr>
+                                <td colspan="3" style="text-align: center; color: #6c757d; padding: 40px;">
+                                    Загрузите данные Excel (листы: Расход, Запасы, Min) для расчёта прогноза
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script>
+        'use strict';
+
+        // ============================================================================
+        // CONFIGURATION & CONSTANTS
+        // ============================================================================
+        const CONFIG = {
+            PACK_TYPES: [
+                "MEDIUM 800х600х300",
+                "MEDIUM 600х400х400\nR-mixed",
+                "MEDIUM 400х300х300\nR-mixed",
+                "MEDIUM 400х300х150",
+                "MEDIUM 300*210*100 R-mixed",
+                "Скотч R-mixed",
+                "Скотч цветной",
+                "Стрейч прозрачный"
+            ],
+            DEFAULT_MINIMUMS: [54000, 43200, 38400, 16000, 5000, 5000, 5000, 5000],
+            MIN_PURCHASE_BATCHES: [24000, 10000, 28000, 0, 5040, 19200, 1500, 0],
+            DEFAULT_MA_WINDOW: 8,
+            FORECAST_PERIOD_WEEKS: 1,
+            ALERT_DURATION: 5000,
+            WARNING_THRESHOLD: 1.0,
+            DANGER_THRESHOLD: 0.8,
+            MONTH_NAMES: {
+                'янв': 1, 'фев': 2, 'мар': 3, 'апр': 4, 'май': 5, 'июн': 6,
+                'июл': 7, 'авг': 8, 'сен': 9, 'окт': 10, 'ноя': 11, 'дек': 12
+            },
+            MONTH_ABBR: ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек']
+        };
+
+        // ============================================================================
+        // UTILITY FUNCTIONS
+        // ============================================================================
+        const Utils = {
+            /**
+             * Safely parse number from string or number input
+             */
+            parseNumber(value) {
+                if (typeof value === 'number') return isNaN(value) ? 0 : value;
+                if (typeof value === 'string') {
+                    const cleaned = value.replace(/\s/g, '');
+                    const parsed = parseFloat(cleaned);
+                    return isNaN(parsed) ? 0 : parsed;
+                }
+                return 0;
+            },
+
+            /**
+             * Parse Russian date from Excel format or string
+             */
+            parseRussianDate(dayStr, monthNum) {
+                if (typeof dayStr === 'number') {
+                    const excelEpoch = new Date(1899, 11, 30);
+                    const date = new Date(excelEpoch.getTime() + dayStr * 24 * 60 * 60 * 1000);
+                    return date.toISOString().split('T')[0];
+                }
+                
+                if (!dayStr || typeof dayStr !== 'string') return null;
+                
+                const parts = dayStr.split(' ');
+                if (parts.length < 2) return null;
+                
+                const day = parts[0];
+                const monthAbbr = parts[1];
+                const month = CONFIG.MONTH_NAMES[monthAbbr.toLowerCase()];
+                
+                if (!month || isNaN(day)) return null;
+                
+                const currentYear = new Date().getFullYear();
+                const currentMonth = new Date().getMonth() + 1;
+                const year = month <= currentMonth ? currentYear : currentYear - 1;
+                
+                return `${year}-${month.toString().padStart(2, '0')}-${day.padStart(2, '0')}`;
+            },
+
+            /**
+             * Get ISO week number from date string
+             */
+            getWeekNumber(dateStr) {
+                const date = new Date(dateStr);
+                date.setHours(0, 0, 0, 0);
+                date.setDate(date.getDate() + 3 - (date.getDay() + 6) % 7);
+                const week1 = new Date(date.getFullYear(), 0, 4);
+                return 1 + Math.round(((date.getTime() - week1.getTime()) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7);
+            },
+
+            /**
+             * Format date to Russian format
+             */
+            formatRussianDate(dateStr) {
+                const date = new Date(dateStr);
+                return `${date.getDate()} ${CONFIG.MONTH_ABBR[date.getMonth()]}`;
+            },
+
+            /**
+             * Validate date string
+             */
+            isValidDate(dateStr) {
+                if (!dateStr) return false;
+                const date = new Date(dateStr);
+                return date instanceof Date && !isNaN(date);
+            },
+
+            /**
+             * Format number with thousand separators
+             */
+            formatNumber(num) {
+                return Math.round(num).toLocaleString('ru-RU');
+            }
+        };
+
+        // ============================================================================
+        // DATA MANAGER - Handles all data storage and validation
+        // ============================================================================
+        class DataManager {
+            constructor() {
+                this.weeklyConsumption = [];
+                this.weeklyStocks = [];
+                this.minimums = [...CONFIG.DEFAULT_MINIMUMS];
+                this.purchaseBatches = [...CONFIG.MIN_PURCHASE_BATCHES];
+                this.stocks = new Array(CONFIG.PACK_TYPES.length).fill(0);
+                this.thresholds = new Array(CONFIG.PACK_TYPES.length).fill(0);
+                this._avgConsumptionCache = null;
+                this._avgConsumptionInvalidated = true;
+            }
+
+            /**
+             * Add daily data entry with validation
+             */
+            addDailyEntry(date, pcsIn, pcsOut) {
+                if (!Utils.isValidDate(date)) {
+                    throw new Error('Некорректная дата');
+                }
+                
+                const parsedIn = Utils.parseNumber(pcsIn);
+                const parsedOut = Utils.parseNumber(pcsOut);
+                
+                if (parsedIn < 0 || parsedOut < 0) {
+                    throw new Error('Значения не могут быть отрицательными');
+                }
+                
+                this.dailyHistory.push([date, parsedIn, parsedOut]);
+                this._sharesCacheInvalidated = true;
+                
+                return { date, pcsIn: parsedIn, pcsOut: parsedOut };
+            }
+
+            /**
+             * Load data from Excel workbook with new structure
+             * Expected sheets: "Расход", "Запасы", "Min"
+             */
+            loadFromWorkbook(workbook) {
+                const consumptionSheet = workbook.Sheets['Расход'];
+                if (!consumptionSheet) throw new Error('Лист "Расход" не найден');
+                
+                const consumptionData = XLSX.utils.sheet_to_json(consumptionSheet, { header: 1 });
+                this.weeklyConsumption = [];
+                
+                for (let i = 1; i < consumptionData.length; i++) {
+                    const row = consumptionData[i];
+                    if (!row[0]) continue;
+                    
+                    const weekEntry = [
+                        Utils.parseNumber(row[0]),
+                        Utils.parseNumber(row[1])
+                    ];
+                    
+                    for (let j = 2; j < 2 + CONFIG.PACK_TYPES.length; j++) {
+                        const value = row[j];
+                        if (value === '-' || value === '' || value === null || value === undefined) {
+                            weekEntry.push(null);
+                        } else {
+                            const parsed = Utils.parseNumber(value);
+                            weekEntry.push(parsed);
+                            if (this.weeklyConsumption.length === 20 && j === 2) {
+                                console.log('Пример загрузки CW21, первый материал:', {
+                                    rawValue: value,
+                                    type: typeof value,
+                                    parsed,
+                                    isZero: parsed === 0,
+                                    isNull: parsed === null
+                                });
+                            }
+                        }
+                    }
+                    
+                    this.weeklyConsumption.push(weekEntry);
+                }
+                
+                console.log(`Загружено ${this.weeklyConsumption.length} недель расхода`);
+                if (this.weeklyConsumption.length > 0) {
+                    console.log('Первая неделя:', this.weeklyConsumption[0]);
+                    console.log('Последняя неделя:', this.weeklyConsumption[this.weeklyConsumption.length - 1]);
+                    console.log('Неделя 21 (индекс 20):', this.weeklyConsumption[20]);
+                    console.log('Неделя 42 (индекс 41):', this.weeklyConsumption[41]);
+                }
+
+                const stocksSheet = workbook.Sheets['Запасы'];
+                if (!stocksSheet) throw new Error('Лист "Запасы" не найден');
+                
+                const stocksData = XLSX.utils.sheet_to_json(stocksSheet, { header: 1 });
+                this.weeklyStocks = [];
+                
+                for (let i = 1; i < stocksData.length; i++) {
+                    const row = stocksData[i];
+                    if (!row[0]) continue;
+                    
+                    const weekEntry = [
+                        Utils.parseNumber(row[0]),
+                        Utils.parseNumber(row[1])
+                    ];
+                    
+                    for (let j = 2; j < 2 + CONFIG.PACK_TYPES.length; j++) {
+                        const value = row[j];
+                        if (value === '-' || value === '' || value === null || value === undefined) {
+                            weekEntry.push(null);
+                        } else {
+                            weekEntry.push(Utils.parseNumber(value));
+                        }
+                    }
+                    
+                    this.weeklyStocks.push(weekEntry);
+                }
+
+                if (this.weeklyStocks.length > 0) {
+                    for (let weekIdx = this.weeklyStocks.length - 1; weekIdx >= 0; weekIdx--) {
+                        const week = this.weeklyStocks[weekIdx];
+                        let hasRealData = false;
+                        
+                        for (let i = 0; i < CONFIG.PACK_TYPES.length; i++) {
+                            const stockValue = week[2 + i];
+                            if (stockValue !== null && stockValue !== undefined && !isNaN(stockValue)) {
+                                this.stocks[i] = stockValue;
+                                hasRealData = true;
+                            }
+                        }
+                        
+                        if (hasRealData) break;
+                    }
+                }
+
+                const minSheet = workbook.Sheets['Min'];
+                if (minSheet) {
+                    const minData = XLSX.utils.sheet_to_json(minSheet, { header: 1 });
+                    
+                    for (let i = 1; i < minData.length && i <= CONFIG.PACK_TYPES.length; i++) {
+                        const row = minData[i];
+                        if (row && row.length >= 3) {
+                            this.minimums[i-1] = Utils.parseNumber(row[1]);
+                            this.purchaseBatches[i-1] = Utils.parseNumber(row[2]);
+                        }
+                    }
+                }
+                
+                this._avgConsumptionInvalidated = true;
+                
+                return {
+                    consumptionWeeks: this.weeklyConsumption.length,
+                    stocksWeeks: this.weeklyStocks.length,
+                    minimumsLoaded: minSheet ? true : false
+                };
+            }
+
+            /**
+             * Calculate average weekly consumption per material with caching
+             */
+            calculateAverageConsumption(weeksWindow) {
+                if (!this._avgConsumptionInvalidated && this._avgConsumptionCache && 
+                    this._avgConsumptionCache.weeksWindow === weeksWindow) {
+                    return this._avgConsumptionCache.data;
+                }
+                
+                if (this.weeklyConsumption.length < 1) {
+                    console.warn('calculateAverageConsumption: нет данных weeklyConsumption');
+                    return new Array(CONFIG.PACK_TYPES.length).fill(0);
+                }
+                
+                const weeksWithData = [];
+                for (let i = this.weeklyConsumption.length - 1; i >= 0 && weeksWithData.length < weeksWindow; i--) {
+                    const week = this.weeklyConsumption[i];
+                    let hasData = false;
+                    for (let j = 2; j < 2 + CONFIG.PACK_TYPES.length; j++) {
+                        if (week[j] !== null && week[j] !== undefined && !isNaN(week[j])) {
+                            hasData = true;
+                            break;
+                        }
+                    }
+                    if (hasData) {
+                        weeksWithData.unshift(week);
+                    }
+                }
+                
+                const window = weeksWithData.length;
+                const recentWeeks = weeksWithData;
+                
+                console.log(`calculateAverageConsumption: запрошено недель=${weeksWindow}, найдено недель с данными=${window}`);
+                console.log('Последние недели С ДАННЫМИ:', recentWeeks);
+                
+                const totals = new Array(CONFIG.PACK_TYPES.length).fill(0);
+                const counts = new Array(CONFIG.PACK_TYPES.length).fill(0);
+                
+                for (let i = 0; i < recentWeeks.length; i++) {
+                    for (let j = 0; j < CONFIG.PACK_TYPES.length; j++) {
+                        const value = recentWeeks[i][2 + j];
+                        if (i === 0 && j === 0) {
+                            console.log(`Проверка значения [${i}][${j}]:`, {
+                                value,
+                                type: typeof value,
+                                isNull: value === null,
+                                isUndefined: value === undefined,
+                                isNaN: isNaN(value),
+                                passes: value !== null && value !== undefined && !isNaN(value)
+                            });
+                        }
+                        if (value !== null && value !== undefined && !isNaN(value)) {
+                            totals[j] += value;
+                            counts[j] += 1;
+                        }
+                    }
+                }
+                
+                const averages = totals.map((total, idx) => 
+                    counts[idx] > 0 ? total / counts[idx] : 0
+                );
+                
+                console.log('Суммы:', totals);
+                console.log('Количество недель с данными:', counts);
+                console.log('Средние значения:', averages);
+                
+                this._avgConsumptionCache = {
+                    weeksWindow: weeksWindow,
+                    data: averages
+                };
+                this._avgConsumptionInvalidated = false;
+                
+                return averages;
+            }
+
+            /**
+             * Calculate EMA (Exponential Moving Average) - больший вес последним данным
+             */
+            calculateEMA(weeksWindow, alpha = 0.3) {
+                const weeksWithData = this._getWeeksWithData(weeksWindow);
+                if (weeksWithData.length < 1) {
+                    return new Array(CONFIG.PACK_TYPES.length).fill(0);
+                }
+                
+                const ema = new Array(CONFIG.PACK_TYPES.length).fill(0);
+                
+                for (let j = 0; j < CONFIG.PACK_TYPES.length; j++) {
+                    let currentEma = 0;
+                    let initialized = false;
+                    
+                    for (let i = 0; i < weeksWithData.length; i++) {
+                        const value = weeksWithData[i][2 + j];
+                        if (value !== null && value !== undefined && !isNaN(value)) {
+                            if (!initialized) {
+                                currentEma = value;
+                                initialized = true;
+                            } else {
+                                currentEma = alpha * value + (1 - alpha) * currentEma;
+                            }
+                        }
+                    }
+                    ema[j] = currentEma;
+                }
+                
+                return ema;
+            }
+
+            /**
+             * Calculate WMA (Weighted Moving Average) - линейные веса
+             */
+            calculateWMA(weeksWindow) {
+                const weeksWithData = this._getWeeksWithData(weeksWindow);
+                if (weeksWithData.length < 1) {
+                    return new Array(CONFIG.PACK_TYPES.length).fill(0);
+                }
+                
+                const window = weeksWithData.length;
+                const totals = new Array(CONFIG.PACK_TYPES.length).fill(0);
+                let weightSum = 0;
+                
+                for (let i = 0; i < weeksWithData.length; i++) {
+                    const weight = i + 1;
+                    weightSum += weight;
+                    
+                    for (let j = 0; j < CONFIG.PACK_TYPES.length; j++) {
+                        const value = weeksWithData[i][2 + j];
+                        if (value !== null && value !== undefined && !isNaN(value)) {
+                            totals[j] += value * weight;
+                        }
+                    }
+                }
+                
+                return totals.map(total => weightSum > 0 ? total / weightSum : 0);
+            }
+
+            /**
+             * Calculate trend using linear regression
+             */
+            calculateTrendForecast(weeksWindow) {
+                const weeksWithData = this._getWeeksWithData(weeksWindow);
+                if (weeksWithData.length < 2) {
+                    return new Array(CONFIG.PACK_TYPES.length).fill(0);
+                }
+                
+                const forecasts = [];
+                
+                for (let j = 0; j < CONFIG.PACK_TYPES.length; j++) {
+                    const points = [];
+                    for (let i = 0; i < weeksWithData.length; i++) {
+                        const value = weeksWithData[i][2 + j];
+                        if (value !== null && value !== undefined && !isNaN(value)) {
+                            points.push({ x: i, y: value });
+                        }
+                    }
+                    
+                    if (points.length < 2) {
+                        forecasts.push(0);
+                        continue;
+                    }
+                    
+                    const n = points.length;
+                    let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+                    
+                    for (let i = 0; i < n; i++) {
+                        sumX += points[i].x;
+                        sumY += points[i].y;
+                        sumXY += points[i].x * points[i].y;
+                        sumX2 += points[i].x * points[i].x;
+                    }
+                    
+                    const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+                    const intercept = (sumY - slope * sumX) / n;
+                    
+                    const nextX = n;
+                    const forecast = slope * nextX + intercept;
+                    forecasts.push(Math.max(0, forecast));
+                }
+                
+                return forecasts;
+            }
+
+            /**
+             * Calculate hybrid forecast (combination of methods + safety stock)
+             */
+            calculateHybridForecast(weeksWindow, safetyStockPercent = 20) {
+                const sma = this.calculateAverageConsumption(weeksWindow);
+                const ema = this.calculateEMA(weeksWindow);
+                const wma = this.calculateWMA(weeksWindow);
+                const trend = this.calculateTrendForecast(weeksWindow);
+                
+                const hybrid = [];
+                for (let i = 0; i < CONFIG.PACK_TYPES.length; i++) {
+                    let forecast = (sma[i] * 0.25 + ema[i] * 0.35 + wma[i] * 0.25 + trend[i] * 0.15);
+                    
+                    const safetyStock = forecast * (safetyStockPercent / 100);
+                    forecast += safetyStock;
+                    
+                    hybrid.push(forecast);
+                }
+                
+                return hybrid;
+            }
+
+            /**
+             * Helper: get weeks with data (extracted for reuse)
+             */
+            _getWeeksWithData(weeksWindow) {
+                const weeksWithData = [];
+                for (let i = this.weeklyConsumption.length - 1; i >= 0 && weeksWithData.length < weeksWindow; i--) {
+                    const week = this.weeklyConsumption[i];
+                    let hasData = false;
+                    for (let j = 2; j < 2 + CONFIG.PACK_TYPES.length; j++) {
+                        if (week[j] !== null && week[j] !== undefined && !isNaN(week[j])) {
+                            hasData = true;
+                            break;
+                        }
+                    }
+                    if (hasData) {
+                        weeksWithData.unshift(week);
+                    }
+                }
+                return weeksWithData;
+            }
+
+            /**
+             * Add weekly consumption manually
+             */
+            addWeeklyConsumption(cw, month, ...materials) {
+                if (materials.length !== CONFIG.PACK_TYPES.length) {
+                    throw new Error('Некорректное количество материалов');
+                }
+                
+                const weekEntry = [Utils.parseNumber(cw), Utils.parseNumber(month)];
+                materials.forEach(val => weekEntry.push(Utils.parseNumber(val)));
+                
+                this.weeklyConsumption = this.weeklyConsumption.filter(row => row[0] !== weekEntry[0]);
+                this.weeklyConsumption.push(weekEntry);
+                this._avgConsumptionInvalidated = true;
+                
+                return true;
+            }
+
+            /**
+             * Update stocks from UI inputs
+             */
+            updateStocks(stocksArray) {
+                if (stocksArray.length !== CONFIG.PACK_TYPES.length) {
+                    throw new Error('Некорректное количество значений остатков');
+                }
+                
+                this.stocks = stocksArray.map(val => {
+                    const parsed = Utils.parseNumber(val);
+                    if (parsed < 0) throw new Error('Остатки не могут быть отрицательными');
+                    return parsed;
+                });
+            }
+
+            /**
+             * Update thresholds from UI inputs
+             */
+            updateThresholds(thresholdsArray) {
+                if (thresholdsArray.length !== CONFIG.PACK_TYPES.length) {
+                    throw new Error('Некорректное количество значений минимальных остатков');
+                }
+                
+                this.thresholds = thresholdsArray.map(val => {
+                    const parsed = Utils.parseNumber(val);
+                    if (parsed < 0) throw new Error('Пороги не могут быть отрицательными');
+                    return parsed;
+                });
+            }
+
+            /**
+             * Reset all data to initial state
+             */
+            reset() {
+                this.weeklyConsumption = [];
+                this.weeklyStocks = [];
+                this.minimums = [...CONFIG.DEFAULT_MINIMUMS];
+                this.purchaseBatches = [...CONFIG.MIN_PURCHASE_BATCHES];
+                this.stocks = new Array(CONFIG.PACK_TYPES.length).fill(0);
+                this.thresholds = new Array(CONFIG.PACK_TYPES.length).fill(0);
+                this._avgConsumptionCache = null;
+                this._avgConsumptionInvalidated = true;
+            }
+
+            /**
+             * Check if there's enough data for forecast
+             */
+            hasEnoughData(requiredWeeks) {
+                let weeksWithData = 0;
+                for (let i = this.weeklyConsumption.length - 1; i >= 0; i--) {
+                    const week = this.weeklyConsumption[i];
+                    for (let j = 2; j < 2 + CONFIG.PACK_TYPES.length; j++) {
+                        if (week[j] !== null && week[j] !== undefined && !isNaN(week[j])) {
+                            weeksWithData++;
+                            break;
+                        }
+                    }
+                    if (weeksWithData >= requiredWeeks) return true;
+                }
+                return weeksWithData >= requiredWeeks;
+            }
+        }
+
+        // ============================================================================
+        // FORECAST CALCULATOR - Business logic for forecasting
+        // ============================================================================
+        class ForecastCalculator {
+            constructor(dataManager) {
+                this.dataManager = dataManager;
+            }
+
+            /**
+             * Calculate multi-week forecast with selected method
+             */
+            calculate(weeksWindow, startWeek, numWeeks, method = 'hybrid', safetyStockPercent = 20) {
+                const validatedWindow = Math.min(Math.max(1, weeksWindow), 52);
+                const validatedNumWeeks = Math.min(Math.max(1, numWeeks), 12);
+                
+                if (!this.dataManager.hasEnoughData(validatedWindow)) {
+                    throw new Error(
+                        `Недостаточно данных для расчёта. Доступно ${this.dataManager.weeklyConsumption.length} недель, требуется минимум ${validatedWindow}.`
+                    );
+                }
+                
+                let avgConsumption;
+                switch(method) {
+                    case 'sma':
+                        avgConsumption = this.dataManager.calculateAverageConsumption(validatedWindow);
+                        console.log('Используется метод: SMA (Simple Moving Average)');
+                        break;
+                    case 'ema':
+                        avgConsumption = this.dataManager.calculateEMA(validatedWindow);
+                        console.log('Используется метод: EMA (Exponential Moving Average)');
+                        break;
+                    case 'wma':
+                        avgConsumption = this.dataManager.calculateWMA(validatedWindow);
+                        console.log('Используется метод: WMA (Weighted Moving Average)');
+                        break;
+                    case 'trend':
+                        avgConsumption = this.dataManager.calculateTrendForecast(validatedWindow);
+                        console.log('Используется метод: Trend (Linear Regression)');
+                        break;
+                    case 'hybrid':
+                    default:
+                        avgConsumption = this.dataManager.calculateHybridForecast(validatedWindow, safetyStockPercent);
+                        console.log('Используется метод: Hybrid (комбинированный + страховой запас)');
+                        break;
+                }
+                
+                console.log('Прогнозные значения расхода:', avgConsumption);
+                
+                const results = [];
+                const weeklyForecasts = [];
+                
+                for (let weekOffset = 0; weekOffset < validatedNumWeeks; weekOffset++) {
+                    const weekForecasts = [];
+                    
+                    for (let i = 0; i < CONFIG.PACK_TYPES.length; i++) {
+                        const avgWeekly = avgConsumption[i];
+                        const currentStock = this.dataManager.stocks[i] || 0;
+                        
+                        const cumulativeConsumption = avgWeekly * (weekOffset + 1);
+                        const expectedStock = currentStock - cumulativeConsumption;
+                        
+                        const threshold = this.dataManager.thresholds[i] > 0 
+                            ? this.dataManager.thresholds[i] 
+                            : this.dataManager.minimums[i];
+                        
+                        const purchaseBatch = this.dataManager.purchaseBatches[i];
+                        
+                        let status = 'ok';
+                        let recommendation = 'ОК';
+                        let purchaseAmount = 0;
+                        
+                        if (expectedStock < threshold * CONFIG.DANGER_THRESHOLD) {
+                            status = 'danger';
+                            recommendation = 'Закупить срочно';
+                            const shortage = threshold - expectedStock;
+                            purchaseAmount = purchaseBatch > 0 
+                                ? Math.ceil(shortage / purchaseBatch) * purchaseBatch 
+                                : Math.ceil(shortage);
+                        } else if (expectedStock < threshold * CONFIG.WARNING_THRESHOLD) {
+                            status = 'warning';
+                            recommendation = 'На границе';
+                            const shortage = threshold - expectedStock;
+                            purchaseAmount = purchaseBatch > 0 
+                                ? Math.ceil(shortage / purchaseBatch) * purchaseBatch 
+                                : Math.ceil(shortage);
+                        }
+                        
+                        weekForecasts.push({
+                            expectedStock,
+                            forecastConsumption: avgWeekly,
+                            threshold,
+                            purchaseBatch,
+                            purchaseAmount,
+                            status,
+                            recommendation
+                        });
+                        
+                        if (weekOffset === 0) {
+                            results.push({
+                                packType: CONFIG.PACK_TYPES[i],
+                                currentStock,
+                                avgWeeklyConsumption: avgWeekly,
+                                threshold
+                            });
+                        }
+                    }
+                    
+                    weeklyForecasts.push(weekForecasts);
+                }
+                
+                return {
+                    results,
+                    weeklyForecasts,
+                    avgConsumption,
+                    startWeek: startWeek,
+                    numWeeks: validatedNumWeeks,
+                    weeksWindow: validatedWindow
+                };
+            }
+
+            /**
+             * Generate statistics from multi-week forecast results
+             */
+            generateStats(forecastData) {
+                const { results, weeklyForecasts, numWeeks } = forecastData;
+                
+                const stats = {
+                    ok: 0,
+                    warning: 0,
+                    danger: 0,
+                    total: results.length
+                };
+                
+                for (let i = 0; i < results.length; i++) {
+                    let worstStatus = 'ok';
+                    
+                    for (let w = 0; w < numWeeks; w++) {
+                        const weekForecast = weeklyForecasts[w][i];
+                        if (weekForecast.status === 'danger') {
+                            worstStatus = 'danger';
+                            break;
+                        } else if (weekForecast.status === 'warning' && worstStatus === 'ok') {
+                            worstStatus = 'warning';
+                        }
+                    }
+                    
+                    if (worstStatus === 'ok') stats.ok++;
+                    else if (worstStatus === 'warning') stats.warning++;
+                    else if (worstStatus === 'danger') stats.danger++;
+                }
+                
+                return stats;
+            }
+        }
+
+        // ============================================================================
+        // UI MANAGER - Handles all DOM manipulation and user interaction
+        // ============================================================================
+        class UIManager {
+            constructor() {
+                this.elements = this._cacheElements();
+                this._alertTimeout = null;
+            }
+
+            /**
+             * Cache frequently used DOM elements
+             */
+            _cacheElements() {
+                return {
+                    alertBox: document.getElementById('alertBox'),
+                    fileInput: document.getElementById('fileInput'),
+                    maWindow: document.getElementById('maWindow'),
+                    startWeek: document.getElementById('startWeek'),
+                    forecastWeeks: document.getElementById('forecastWeeks'),
+                    forecastMethod: document.getElementById('forecastMethod'),
+                    safetyStock: document.getElementById('safetyStock'),
+                    resultBody: document.getElementById('resultBody'),
+                    resultHeader: document.getElementById('resultHeader'),
+                    statsGrid: document.getElementById('statsGrid'),
+                    forecastInfo: document.getElementById('forecastInfo'),
+                    weekRange: document.getElementById('weekRange')
+                };
+            }
+
+            /**
+             * Show alert with auto-hide
+             */
+            showAlert(message, type = 'info') {
+                if (this._alertTimeout) {
+                    clearTimeout(this._alertTimeout);
+                }
+                
+                this.elements.alertBox.className = `alert alert-${type} show`;
+                this.elements.alertBox.textContent = message;
+                
+                this._alertTimeout = setTimeout(() => {
+                    this.elements.alertBox.classList.remove('show');
+                }, CONFIG.ALERT_DURATION);
+            }
+
+            /**
+             * Render forecast results in table with multi-week forecast
+             */
+            renderResults(forecastData) {
+                const { results, weeklyForecasts, startWeek, numWeeks } = forecastData;
+                
+                this.elements.forecastInfo.style.display = 'block';
+                const endWeek = startWeek + numWeeks - 1;
+                this.elements.weekRange.textContent = `${startWeek} - ${endWeek} (${numWeeks} ${numWeeks === 1 ? 'неделя' : numWeeks < 5 ? 'недели' : 'недель'})`;
+                
+                this.elements.resultHeader.innerHTML = '';
+                
+                const headerRow1 = document.createElement('tr');
+                headerRow1.innerHTML = `
+                    <th rowspan="2">Тип упаковки</th>
+                    <th rowspan="2">Текущий остаток</th>
+                    <th rowspan="2">Средний расход/нед</th>
+                    <th colspan="${numWeeks}">Прогноз по неделям (остаток на конец недели)</th>
+                    <th rowspan="2">Минимум</th>
+                    <th rowspan="2">Статус / Действия</th>
+                `;
+                
+                const headerRow2 = document.createElement('tr');
+                for (let w = 0; w < numWeeks; w++) {
+                    const th = document.createElement('th');
+                    th.textContent = `CW ${startWeek + w}`;
+                    th.style.fontSize = '0.85em';
+                    headerRow2.appendChild(th);
+                }
+                
+                this.elements.resultHeader.appendChild(headerRow1);
+                this.elements.resultHeader.appendChild(headerRow2);
+                
+                const fragment = document.createDocumentFragment();
+                
+                for (let i = 0; i < results.length; i++) {
+                    const result = results[i];
+                    const tr = document.createElement('tr');
+                    
+                    let minStock = result.currentStock;
+                    let worstStatus = 'ok';
+                    
+                    for (let w = 0; w < numWeeks; w++) {
+                        const weekForecast = weeklyForecasts[w][i];
+                        if (weekForecast.expectedStock < minStock) {
+                            minStock = weekForecast.expectedStock;
+                        }
+                        if (weekForecast.status === 'danger') worstStatus = 'danger';
+                        else if (weekForecast.status === 'warning' && worstStatus === 'ok') worstStatus = 'warning';
+                    }
+                    
+                    tr.className = `status-${worstStatus}`;
+                    
+                    let cells = `
+                        <td><strong>${result.packType.replace(/\n/g, '<br>')}</strong></td>
+                        <td>${Utils.formatNumber(result.currentStock)}</td>
+                        <td>${Utils.formatNumber(result.avgWeeklyConsumption)}</td>
+                    `;
+                    
+                    for (let w = 0; w < numWeeks; w++) {
+                        const weekForecast = weeklyForecasts[w][i];
+                        const statusColor = weekForecast.status === 'danger' ? '#f8d7da' : 
+                                           weekForecast.status === 'warning' ? '#fff3cd' : '#d4edda';
+                        cells += `<td style="background: ${statusColor}; font-weight: bold;">${Utils.formatNumber(weekForecast.expectedStock)}</td>`;
+                    }
+                    
+                    const lastWeekForecast = weeklyForecasts[numWeeks - 1][i];
+                    const purchaseInfo = lastWeekForecast.purchaseAmount > 0 
+                        ? `<br><small style="color: #dc3545;">Закупить: ${Utils.formatNumber(lastWeekForecast.purchaseAmount)}</small>` 
+                        : '';
+                    
+                    cells += `
+                        <td>${Utils.formatNumber(result.threshold)}</td>
+                        <td><span class="badge badge-${worstStatus}">${lastWeekForecast.recommendation}</span>${purchaseInfo}</td>
+                    `;
+                    
+                    tr.innerHTML = cells;
+                    fragment.appendChild(tr);
+                }
+                
+                this.elements.resultBody.innerHTML = '';
+                this.elements.resultBody.appendChild(fragment);
+            }
+
+            /**
+             * Render statistics cards
+             */
+            renderStats(stats) {
+                this.elements.statsGrid.innerHTML = `
+                    <div class="stat-card">
+                        <h3>✅ ОК</h3>
+                        <div class="value">${stats.ok}</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>⚠️ На границе</h3>
+                        <div class="value">${stats.warning}</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>🚨 Требуется закупка</h3>
+                        <div class="value">${stats.danger}</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>📊 Всего позиций</h3>
+                        <div class="value">${stats.total}</div>
+                    </div>
+                `;
+            }
+
+            /**
+             * Clear results display
+             */
+            clearResults() {
+                this.elements.resultBody.innerHTML = `
+                    <tr>
+                        <td colspan="7" style="text-align: center; color: #6c757d; padding: 40px;">
+                            Загрузите данные или добавьте информацию вручную для расчёта прогноза
+                        </td>
+                    </tr>`;
+                this.elements.statsGrid.innerHTML = '';
+            }
+
+            /**
+             * Reset form inputs
+             */
+            resetInputs() {
+                this.elements.dateInput.value = '';
+                this.elements.pcsIn.value = 0;
+                this.elements.pcsOut.value = 0;
+                this.elements.maWindow.value = CONFIG.DEFAULT_MA_WINDOW;
+            }
+
+            /**
+             * Validate input field
+             */
+            validateInput(inputElement, validationFn, errorMessage) {
+                const isValid = validationFn(inputElement.value);
+                
+                if (isValid) {
+                    inputElement.classList.remove('error');
+                    return true;
+                } else {
+                    inputElement.classList.add('error');
+                    this.showAlert(errorMessage, 'error');
+                    return false;
+                }
+            }
+        }
+
+        // ============================================================================
+        // REPORT GENERATOR - Handles Excel export
+        // ============================================================================
+        class ReportGenerator {
+            constructor(dataManager, calculator) {
+                this.dataManager = dataManager;
+                this.calculator = calculator;
+            }
+
+            /**
+             * Generate and download Excel report
+             */
+            generate() {
+                if (typeof XLSX === 'undefined') {
+                    throw new Error('Библиотека XLSX не загружена. Проверьте подключение к интернету.');
+                }
+                
+                if (!this.dataManager.weeklyConsumption.length && !this.dataManager.weeklyStocks.length) {
+                    throw new Error('Нет данных для экспорта. Загрузите файл или добавьте данные.');
+                }
+                
+                const workbook = XLSX.utils.book_new();
+                
+                this._addConsumptionSheet(workbook);
+                this._addStocksSheet(workbook);
+                this._addMinSheet(workbook);
+                this._addForecastSheet(workbook);
+                this._addParametersSheet(workbook);
+                
+                const fileName = `Packaging_Forecast_${new Date().toISOString().split('T')[0]}.xlsx`;
+                XLSX.writeFile(workbook, fileName);
+                
+                return fileName;
+            }
+
+            /**
+             * Add consumption data sheet
+             */
+            _addConsumptionSheet(workbook) {
+                const data = [
+                    ['CW', 'Month', ...CONFIG.PACK_TYPES.map(t => t.replace(/\n/g, ' '))],
+                    ...this.dataManager.weeklyConsumption.map(row => 
+                        row.map(val => val !== undefined && val !== null ? val : 0)
+                    )
+                ];
+                
+                const sheet = XLSX.utils.aoa_to_sheet(data);
+                XLSX.utils.book_append_sheet(workbook, sheet, 'Расход');
+            }
+
+            /**
+             * Add stocks data sheet
+             */
+            _addStocksSheet(workbook) {
+                const data = [
+                    ['CW', 'Month', ...CONFIG.PACK_TYPES.map(t => t.replace(/\n/g, ' '))],
+                    ...this.dataManager.weeklyStocks.map(row => 
+                        row.map(val => val !== undefined && val !== null ? val : '-')
+                    )
+                ];
+                
+                const sheet = XLSX.utils.aoa_to_sheet(data);
+                XLSX.utils.book_append_sheet(workbook, sheet, 'Запасы');
+            }
+
+            /**
+             * Add minimums sheet
+             */
+            _addMinSheet(workbook) {
+                const data = [
+                    ['Материал', 'Минимальный запас', 'Минимальная партия закупки'],
+                    ...CONFIG.PACK_TYPES.map((pack, i) => [
+                        pack.replace(/\n/g, ' '),
+                        this.dataManager.minimums[i],
+                        this.dataManager.purchaseBatches[i]
+                    ])
+                ];
+                
+                const sheet = XLSX.utils.aoa_to_sheet(data);
+                XLSX.utils.book_append_sheet(workbook, sheet, 'Min');
+            }
+
+            /**
+             * Add forecast sheet
+             */
+            _addForecastSheet(workbook) {
+                const weeksWindow = Math.min(
+                    parseInt(document.getElementById('maWindow').value) || CONFIG.DEFAULT_MA_WINDOW,
+                    52
+                );
+                const startWeek = parseInt(document.getElementById('startWeek').value) || 1;
+                const forecastWeeks = parseInt(document.getElementById('forecastWeeks').value) || 4;
+                
+                const forecast = this.calculator.calculate(weeksWindow, startWeek, forecastWeeks);
+                
+                const weekHeaders = [];
+                for (let w = 0; w < forecast.numWeeks; w++) {
+                    weekHeaders.push(`CW ${forecast.startWeek + w}`);
+                }
+                
+                const data = [
+                    ['Тип упаковки', 'Текущий остаток', 'Средний расход/неделя', 
+                     ...weekHeaders, 'Минимум', 'Партия закупки', 'Рекомендация']
+                ];
+                
+                for (let i = 0; i < forecast.results.length; i++) {
+                    const result = forecast.results[i];
+                    const row = [
+                        result.packType.replace(/\n/g, ' '),
+                        result.currentStock,
+                        Math.round(result.avgWeeklyConsumption)
+                    ];
+                    
+                    for (let w = 0; w < forecast.numWeeks; w++) {
+                        const weekForecast = forecast.weeklyForecasts[w][i];
+                        row.push(Math.round(weekForecast.expectedStock));
+                    }
+                    
+                    const lastWeekForecast = forecast.weeklyForecasts[forecast.numWeeks - 1][i];
+                    row.push(
+                        result.threshold,
+                        lastWeekForecast.purchaseBatch,
+                        lastWeekForecast.recommendation
+                    );
+                    
+                    data.push(row);
+                }
+                
+                const sheet = XLSX.utils.aoa_to_sheet(data);
+                XLSX.utils.book_append_sheet(workbook, sheet, 'Прогноз');
+            }
+
+            /**
+             * Add parameters sheet
+             */
+            _addParametersSheet(workbook) {
+                const weeksWindow = Math.min(
+                    parseInt(document.getElementById('maWindow').value) || CONFIG.DEFAULT_MA_WINDOW,
+                    52
+                );
+                
+                const avgConsumption = this.dataManager.calculateAverageConsumption(weeksWindow);
+                
+                const data = [
+                    ['Параметр', 'Значение'],
+                    ['Окно анализа (недель)', weeksWindow],
+                    ['Период прогноза', `${CONFIG.FORECAST_PERIOD_WEEKS} неделя`],
+                    ['Дата создания отчёта', new Date().toLocaleDateString('ru-RU')],
+                    ['Порог предупреждения', `${CONFIG.WARNING_THRESHOLD * 100}% от минимума`],
+                    ['Порог опасности', `${CONFIG.DANGER_THRESHOLD * 100}% от минимума`],
+                    [''],
+                    ['Средний расход по материалам (в неделю)', ''],
+                    ...CONFIG.PACK_TYPES.map((pack, i) => [
+                        pack.replace(/\n/g, ' '), 
+                        Math.round(avgConsumption[i])
+                    ])
+                ];
+                
+                const sheet = XLSX.utils.aoa_to_sheet(data);
+                XLSX.utils.book_append_sheet(workbook, sheet, 'Parameters');
+            }
+        }
+
+        // ============================================================================
+        // APPLICATION CONTROLLER - Main application logic
+        // ============================================================================
+        class Application {
+            constructor() {
+                this.dataManager = new DataManager();
+                this.calculator = new ForecastCalculator(this.dataManager);
+                this.uiManager = new UIManager();
+                this.reportGenerator = new ReportGenerator(this.dataManager, this.calculator);
+                
+                this._initializeEventListeners();
+                this._checkXLSXLibrary();
+            }
+
+            /**
+             * Initialize event listeners
+             */
+            _initializeEventListeners() {
+                this.uiManager.elements.fileInput.addEventListener('change', (e) => {
+                    this.handleFileUpload(e);
+                });
+            }
+
+            /**
+             * Check if XLSX library is loaded
+             */
+            _checkXLSXLibrary() {
+                window.addEventListener('load', () => {
+                    if (typeof XLSX === 'undefined') {
+                        console.error('XLSX library failed to load from primary CDN. Attempting fallback.');
+                        this._loadFallbackXLSX();
+                    }
+                });
+            }
+
+            /**
+             * Load fallback XLSX library
+             */
+            _loadFallbackXLSX() {
+                const script = document.createElement('script');
+                script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+                
+                script.onload = () => {
+                    if (typeof XLSX !== 'undefined') {
+                        console.log('XLSX library loaded successfully from fallback CDN.');
+                        this.uiManager.showAlert('Библиотека XLSX загружена через резервный источник.', 'info');
+                    } else {
+                        this.uiManager.showAlert(
+                            'Ошибка: Не удалось загрузить библиотеку XLSX. Проверьте подключение к интернету.',
+                            'error'
+                        );
+                    }
+                };
+                
+                script.onerror = () => {
+                    this.uiManager.showAlert(
+                        'Ошибка: Не удалось загрузить библиотеку XLSX с обоих источников. Функции экспорта недоступны.',
+                        'error'
+                    );
+                };
+                
+                document.head.appendChild(script);
+            }
+
+            /**
+             * Handle file upload
+             */
+            handleFileUpload(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+                
+                const reader = new FileReader();
+                
+                reader.onload = (e) => {
+                    try {
+                        if (typeof XLSX === 'undefined') {
+                            throw new Error('Библиотека XLSX не загружена. Проверьте подключение к интернету.');
+                        }
+                        
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array', dateNF: 'dd mmm' });
+                        
+                        const result = this.dataManager.loadFromWorkbook(workbook);
+                        
+                        if (this.dataManager.weeklyConsumption.length > 0) {
+                            const lastWeek = this.dataManager.weeklyConsumption[this.dataManager.weeklyConsumption.length - 1][0];
+                            this.uiManager.elements.startWeek.value = lastWeek + 1;
+                        }
+                        
+                        const minInfo = result.minimumsLoaded ? ' Минимумы загружены.' : '';
+                        this.uiManager.showAlert(
+                            `Файл загружен успешно! Недель расхода: ${result.consumptionWeeks}, недель остатков: ${result.stocksWeeks}.${minInfo}`,
+                            'success'
+                        );
+                        
+                        this.handleCalculateForecast();
+                    } catch (err) {
+                        this.uiManager.showAlert(`Ошибка загрузки файла: ${err.message}`, 'error');
+                        console.error('File upload error:', err);
+                    }
+                };
+                
+                reader.onerror = () => {
+                    this.uiManager.showAlert('Ошибка чтения файла. Попробуйте другой файл.', 'error');
+                };
+                
+                reader.readAsArrayBuffer(file);
+            }
+
+            /**
+             * Handle add daily data
+             */
+            handleAddDailyData() {
+                try {
+                    const date = this.uiManager.elements.dateInput.value;
+                    const pcsIn = this.uiManager.elements.pcsIn.value;
+                    const pcsOut = this.uiManager.elements.pcsOut.value;
+                    
+                    const entry = this.dataManager.addDailyEntry(date, pcsIn, pcsOut);
+                    const updated = this.dataManager.updateWeeklyFromDaily(date);
+                    
+                    this.uiManager.showAlert('Данные добавлены успешно!', 'success');
+                    this.handleCalculateForecast();
+                } catch (err) {
+                    this.uiManager.showAlert(`Ошибка: ${err.message}`, 'error');
+                }
+            }
+
+            /**
+             * Handle calculate forecast
+             */
+            handleCalculateForecast() {
+                try {
+                    const maWindow = parseInt(this.uiManager.elements.maWindow.value) || CONFIG.DEFAULT_MA_WINDOW;
+                    const startWeek = parseInt(this.uiManager.elements.startWeek.value) || 1;
+                    const forecastWeeks = parseInt(this.uiManager.elements.forecastWeeks.value) || 4;
+                    const method = this.uiManager.elements.forecastMethod.value || 'hybrid';
+                    const safetyStock = parseInt(this.uiManager.elements.safetyStock.value) || 20;
+                    
+                    const forecast = this.calculator.calculate(maWindow, startWeek, forecastWeeks, method, safetyStock);
+                    const stats = this.calculator.generateStats(forecast);
+                    
+                    this.uiManager.renderResults(forecast);
+                    this.uiManager.renderStats(stats);
+                    
+                    const methodNames = {
+                        'sma': 'SMA',
+                        'ema': 'EMA',
+                        'wma': 'WMA',
+                        'trend': 'Тренд',
+                        'hybrid': 'Гибридный'
+                    };
+                    this.uiManager.showAlert(`Прогноз рассчитан (${methodNames[method]})!`, 'success');
+                } catch (err) {
+                    this.uiManager.showAlert(`Ошибка расчёта: ${err.message}`, 'error');
+                }
+            }
+
+            /**
+             * Handle reset
+             */
+            handleReset() {
+                if (!confirm('Вы уверены? Все данные будут удалены.')) return;
+                
+                this.dataManager.reset();
+                this.uiManager.resetInputs();
+                this.uiManager.clearResults();
+                this.uiManager.showAlert('Форма сброшена. Загрузите новый файл для продолжения работы.', 'info');
+            }
+
+            /**
+             * Handle download report
+             */
+            handleDownloadReport() {
+                try {
+                    const fileName = this.reportGenerator.generate();
+                    this.uiManager.showAlert(`Отчёт "${fileName}" успешно создан и скачан!`, 'success');
+                } catch (err) {
+                    this.uiManager.showAlert(`Ошибка при создании отчёта: ${err.message}`, 'error');
+                }
+            }
+        }
+
+        // ============================================================================
+        // INITIALIZE APPLICATION
+        // ============================================================================
+        const app = new Application();
+    </script>
+</body>
+</html>
