@@ -1338,14 +1338,19 @@
              * Render minimum stock table
              */
             renderMinimumStocks(minimums, purchaseBatches) {
+                if (!this.elements.minimumStockBody) {
+                    console.error('minimumStockBody element not found');
+                    return;
+                }
+
                 const fragment = document.createDocumentFragment();
 
                 for (let i = 0; i < CONFIG.PACK_TYPES.length; i++) {
                     const tr = document.createElement('tr');
                     tr.innerHTML = `
                         <td><strong>${CONFIG.PACK_TYPES[i].replace(/\n/g, '<br>')}</strong></td>
-                        <td><input type="number" class="min-stock-input" data-index="${i}" value="${minimums[i]}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;"></td>
-                        <td><input type="number" class="purchase-batch-input" data-index="${i}" value="${purchaseBatches[i]}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;"></td>
+                        <td><input type="number" class="min-stock-input" data-index="${i}" value="${minimums[i] || 0}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;"></td>
+                        <td><input type="number" class="purchase-batch-input" data-index="${i}" value="${purchaseBatches[i] || 0}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;"></td>
                     `;
                     fragment.appendChild(tr);
                 }
@@ -1564,6 +1569,16 @@
             _initializeEventListeners() {
                 this.uiManager.elements.fileInput.addEventListener('change', (e) => {
                     this.handleFileUpload(e);
+                });
+
+                document.addEventListener('change', (e) => {
+                    if (e.target.classList.contains('min-stock-input')) {
+                        const index = parseInt(e.target.dataset.index);
+                        this.dataManager.minimums[index] = parseInt(e.target.value) || 0;
+                    } else if (e.target.classList.contains('purchase-batch-input')) {
+                        const index = parseInt(e.target.dataset.index);
+                        this.dataManager.purchaseBatches[index] = parseInt(e.target.value) || 0;
+                    }
                 });
             }
 
