@@ -33,16 +33,16 @@
             padding: 30px;
             text-align: center;
         }
-        
-        .header h1 {
-            font-size: 2em;
-            margin-bottom: 10px;
-        }
-        
-        .header p {
-            opacity: 0.9;
-            font-size: 1.1em;
-        }
+
+        .header h1 {
+            font-size: 1.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
         
         .content {
             padding: 30px;
@@ -417,6 +417,31 @@
             </div>
             
             <div class="section">
+                <h2>Минимальные запасы</h2>
+                <p style="margin-top: 10px; margin-bottom: 15px; color: #6c757d; font-size: 0.95em;">
+                    Отредактируйте минимальные запасы по видам упаковки (значения загружаются из файла)
+                </p>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Тип упаковки</th>
+                                <th>Минимальный запас</th>
+                                <th>Минимальная партия закупки</th>
+                            </tr>
+                        </thead>
+                        <tbody id="minimumStockBody">
+                            <tr>
+                                <td colspan="3" style="text-align: center; color: #6c757d; padding: 40px;">
+                                    Загрузите данные Excel для отображения минимальных запасов
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="section" style="display: none;">
                 <h2>Результаты прогноза</h2>
                 <div id="forecastInfo" style="margin-bottom: 20px; padding: 15px; background: #e7f3ff; border-left: 4px solid #2196F3; border-radius: 5px; display: none;">
                     <strong>📊 Прогноз на недели: <span id="weekRange"></span></strong>
@@ -441,8 +466,8 @@
                     </table>
                 </div>
             </div>
-        </div>
-    </div>
+            </div>
+            </div>
 
     <script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script>
@@ -570,6 +595,8 @@
                 this.thresholds = new Array(CONFIG.PACK_TYPES.length).fill(0);
                 this._avgConsumptionCache = null;
                 this._avgConsumptionInvalidated = true;
+                this.purchaseOrders = new Array(CONFIG.PACK_TYPES.length).fill(0);
+                this.salesForecast = [];
             }
 
             /**
@@ -701,13 +728,41 @@
                 }
                 
                 this._avgConsumptionInvalidated = true;
-                
+
+                const purchaseSheet = workbook.Sheets['Закупки'];
+                if (purchaseSheet) {
+                    const purchaseData = XLSX.utils.sheet_to_json(purchaseSheet, { header: 1 });
+                    if (purchaseData.length >= 2) {
+                        const packageRow = purchaseData[0];
+                        const quantityRow = purchaseData[1];
+                        for (let i = 0; i < CONFIG.PACK_TYPES.length && i < packageRow.length; i++) {
+                            this.purchaseOrders[i] = Utils.parseNumber(quantityRow[i]);
+                        }
+                    }
+                }
+
+                const salesSheet = workbook.Sheets['Прогноз_продаж'];
+                if (salesSheet) {
+                    const salesData = XLSX.utils.sheet_to_json(salesSheet, { header: 1 });
+                    this.salesForecast = [];
+                    for (let i = 1; i < salesData.length; i++) {
+                        const row = salesData[i];
+                        if (row && row.length >= 3 && row[0]) {
+                            this.salesForecast.push({
+                                cw: Utils.parseNumber(row[0]),
+                                month: Utils.parseNumber(row[1]),
+                                quantity: Utils.parseNumber(row[2])
+                            });
+                        }
+                    }
+                }
+
                 return {
                     consumptionWeeks: this.weeklyConsumption.length,
                     stocksWeeks: this.weeklyStocks.length,
                     minimumsLoaded: minSheet ? true : false
                 };
-            }
+                }
 
             /**
              * Calculate average weekly consumption per material with caching
@@ -910,12 +965,42 @@
                 }
                 
                 return hybrid;
-            }
+                }
 
-            /**
-             * Helper: get weeks with data (extracted for reuse)
-             */
-            _getWeeksWithData(weeksWindow) {
+             /**
+              * Calculate material weight percentages based on historical consumption
+              */
+             calculateMaterialWeights() {
+                 const weights = new Array(CONFIG.PACK_TYPES.length).fill(0);
+
+                 if (this.weeklyConsumption.length === 0) {
+                     return weights.map(() => 1 / CONFIG.PACK_TYPES.length);
+                 }
+
+                 const totalByMaterial = new Array(CONFIG.PACK_TYPES.length).fill(0);
+                 let grandTotal = 0;
+
+                 for (const row of this.weeklyConsumption) {
+                     for (let i = 2; i < row.length && i - 2 < CONFIG.PACK_TYPES.length; i++) {
+                         const value = Utils.parseNumber(row[i]);
+                         if (value > 0) {
+                             totalByMaterial[i - 2] += value;
+                             grandTotal += value;
+                         }
+                     }
+                 }
+
+                 if (grandTotal === 0) {
+                     return weights.map(() => 1 / CONFIG.PACK_TYPES.length);
+                 }
+
+                 return totalByMaterial.map(total => total / grandTotal);
+             }
+
+             /**
+              * Helper: get weeks with data (extracted for reuse)
+              */
+             _getWeeksWithData(weeksWindow) {
                 const weeksWithData = [];
                 for (let i = this.weeklyConsumption.length - 1; i >= 0 && weeksWithData.length < weeksWindow; i--) {
                     const week = this.weeklyConsumption[i];
@@ -1182,7 +1267,7 @@
              * Cache frequently used DOM elements
              */
             _cacheElements() {
-                return {
+                const cached = {
                     alertBox: document.getElementById('alertBox'),
                     fileInput: document.getElementById('fileInput'),
                     maWindow: document.getElementById('maWindow'),
@@ -1196,6 +1281,13 @@
                     forecastInfo: document.getElementById('forecastInfo'),
                     weekRange: document.getElementById('weekRange')
                 };
+
+                const minimumStockBody = document.getElementById('minimumStockBody');
+                if (minimumStockBody) {
+                    cached.minimumStockBody = minimumStockBody;
+                }
+
+                return cached;
             }
 
             /**
@@ -1336,6 +1428,31 @@
             }
 
             /**
+             * Render minimum stock table
+             */
+            renderMinimumStocks(minimums, purchaseBatches) {
+                if (!this.elements.minimumStockBody) {
+                    console.error('minimumStockBody element not found');
+                    return;
+                }
+
+                const fragment = document.createDocumentFragment();
+
+                for (let i = 0; i < CONFIG.PACK_TYPES.length; i++) {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td><strong>${CONFIG.PACK_TYPES[i].replace(/\n/g, '<br>')}</strong></td>
+                        <td><input type="number" class="min-stock-input" data-index="${i}" value="${minimums[i] || 0}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;"></td>
+                        <td><input type="number" class="purchase-batch-input" data-index="${i}" value="${purchaseBatches[i] || 0}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;"></td>
+                    `;
+                    fragment.appendChild(tr);
+                }
+
+                this.elements.minimumStockBody.innerHTML = '';
+                this.elements.minimumStockBody.appendChild(fragment);
+            }
+
+            /**
              * Reset form inputs
              */
             resetInputs() {
@@ -1378,22 +1495,24 @@
                 if (typeof XLSX === 'undefined') {
                     throw new Error('Библиотека XLSX не загружена. Проверьте подключение к интернету.');
                 }
-                
+
                 if (!this.dataManager.weeklyConsumption.length && !this.dataManager.weeklyStocks.length) {
                     throw new Error('Нет данных для экспорта. Загрузите файл или добавьте данные.');
                 }
-                
+
                 const workbook = XLSX.utils.book_new();
-                
+
                 this._addConsumptionSheet(workbook);
                 this._addStocksSheet(workbook);
                 this._addMinSheet(workbook);
+                this._addEmptySalesForecastSheet(workbook);
+                this._addEmptyPurchaseForecastSheet(workbook);
                 this._addForecastSheet(workbook);
                 this._addParametersSheet(workbook);
-                
+
                 const fileName = `Packaging_Forecast_${new Date().toISOString().split('T')[0]}.xlsx`;
                 XLSX.writeFile(workbook, fileName);
-                
+
                 return fileName;
             }
 
@@ -1439,9 +1558,77 @@
                         this.dataManager.purchaseBatches[i]
                     ])
                 ];
-                
+
                 const sheet = XLSX.utils.aoa_to_sheet(data);
                 XLSX.utils.book_append_sheet(workbook, sheet, 'Min');
+            }
+
+            /**
+             * Add sales forecast sheet with calculated data
+             */
+            _addEmptySalesForecastSheet(workbook) {
+                const weeksWindow = Math.min(
+                    parseInt(document.getElementById('maWindow').value) || CONFIG.DEFAULT_MA_WINDOW,
+                    52
+                );
+                const startWeek = parseInt(document.getElementById('startWeek').value) || 1;
+                const forecastWeeks = parseInt(document.getElementById('forecastWeeks').value) || 4;
+
+                const forecast = this.calculator.calculate(weeksWindow, startWeek, forecastWeeks);
+
+                const weekHeaders = [];
+                for (let w = 0; w < forecast.numWeeks; w++) {
+                    weekHeaders.push(`Week ${forecast.startWeek + w}`);
+                }
+
+                const data = [
+                    ['', '', ...weekHeaders]
+                ];
+
+                for (let packIdx = 0; packIdx < forecast.results.length; packIdx++) {
+                    const row = ['', ''];
+                    for (let w = 0; w < forecast.numWeeks; w++) {
+                        const weekForecast = forecast.weeklyForecasts[w][packIdx];
+                        row.push(Math.round(weekForecast.forecastConsumption || 0));
+                    }
+                    data.push(row);
+                }
+
+                const sheet = XLSX.utils.aoa_to_sheet(data);
+                XLSX.utils.book_append_sheet(workbook, sheet, 'Прогноз_продаж');
+            }
+
+            /**
+             * Add purchase forecast sheet with calculated data
+             */
+            _addEmptyPurchaseForecastSheet(workbook) {
+                const materialWeights = this.dataManager.calculateMaterialWeights();
+                const salesForecast = this.dataManager.salesForecast;
+                const purchaseOrders = this.dataManager.purchaseOrders;
+
+                const data = [];
+
+                data.push(CONFIG.PACK_TYPES.map(p => p.replace(/\n/g, ' ')));
+
+                const forecastRow = [];
+                for (let i = 0; i < CONFIG.PACK_TYPES.length; i++) {
+                    const weight = materialWeights[i] || 0;
+                    let totalForecast = 0;
+
+                    for (const sale of salesForecast) {
+                        const materialForecast = (sale.quantity || 0) * weight;
+                        totalForecast += materialForecast;
+                    }
+
+                    const purchased = purchaseOrders[i] || 0;
+                    const remaining = Math.max(0, totalForecast - purchased);
+                    forecastRow.push(Math.round(remaining));
+                }
+
+                data.push(forecastRow);
+
+                const sheet = XLSX.utils.aoa_to_sheet(data);
+                XLSX.utils.book_append_sheet(workbook, sheet, 'Прогноз_закупок');
             }
 
             /**
@@ -1454,7 +1641,7 @@
                 );
                 const startWeek = parseInt(document.getElementById('startWeek').value) || 1;
                 const forecastWeeks = parseInt(document.getElementById('forecastWeeks').value) || 4;
-                
+
                 const forecast = this.calculator.calculate(weeksWindow, startWeek, forecastWeeks);
                 
                 const weekHeaders = [];
@@ -1546,6 +1733,16 @@
                 this.uiManager.elements.fileInput.addEventListener('change', (e) => {
                     this.handleFileUpload(e);
                 });
+
+                document.addEventListener('change', (e) => {
+                    if (e.target.classList.contains('min-stock-input')) {
+                        const index = parseInt(e.target.dataset.index);
+                        this.dataManager.minimums[index] = parseInt(e.target.value) || 0;
+                    } else if (e.target.classList.contains('purchase-batch-input')) {
+                        const index = parseInt(e.target.dataset.index);
+                        this.dataManager.purchaseBatches[index] = parseInt(e.target.value) || 0;
+                    }
+                });
             }
 
             /**
@@ -1619,7 +1816,9 @@
                             `Файл загружен успешно! Недель расхода: ${result.consumptionWeeks}, недель остатков: ${result.stocksWeeks}.${minInfo}`,
                             'success'
                         );
-                        
+
+                        this.uiManager.renderMinimumStocks(this.dataManager.minimums, this.dataManager.purchaseBatches);
+
                         this.handleCalculateForecast();
                     } catch (err) {
                         this.uiManager.showAlert(`Ошибка загрузки файла: ${err.message}`, 'error');
