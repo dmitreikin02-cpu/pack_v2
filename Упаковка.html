@@ -595,6 +595,8 @@
                 this.thresholds = new Array(CONFIG.PACK_TYPES.length).fill(0);
                 this._avgConsumptionCache = null;
                 this._avgConsumptionInvalidated = true;
+                this.purchaseOrders = new Array(CONFIG.PACK_TYPES.length).fill(0);
+                this.salesForecast = [];
             }
 
             /**
@@ -726,13 +728,41 @@
                 }
                 
                 this._avgConsumptionInvalidated = true;
-                
+
+                const purchaseSheet = workbook.Sheets['Закупки'];
+                if (purchaseSheet) {
+                    const purchaseData = XLSX.utils.sheet_to_json(purchaseSheet, { header: 1 });
+                    if (purchaseData.length >= 2) {
+                        const packageRow = purchaseData[0];
+                        const quantityRow = purchaseData[1];
+                        for (let i = 0; i < CONFIG.PACK_TYPES.length && i < packageRow.length; i++) {
+                            this.purchaseOrders[i] = Utils.parseNumber(quantityRow[i]);
+                        }
+                    }
+                }
+
+                const salesSheet = workbook.Sheets['Прогноз_продаж'];
+                if (salesSheet) {
+                    const salesData = XLSX.utils.sheet_to_json(salesSheet, { header: 1 });
+                    this.salesForecast = [];
+                    for (let i = 1; i < salesData.length; i++) {
+                        const row = salesData[i];
+                        if (row && row.length >= 3 && row[0]) {
+                            this.salesForecast.push({
+                                cw: Utils.parseNumber(row[0]),
+                                month: Utils.parseNumber(row[1]),
+                                quantity: Utils.parseNumber(row[2])
+                            });
+                        }
+                    }
+                }
+
                 return {
                     consumptionWeeks: this.weeklyConsumption.length,
                     stocksWeeks: this.weeklyStocks.length,
                     minimumsLoaded: minSheet ? true : false
                 };
-            }
+                }
 
             /**
              * Calculate average weekly consumption per material with caching
@@ -935,12 +965,42 @@
                 }
                 
                 return hybrid;
-            }
+                }
 
-            /**
-             * Helper: get weeks with data (extracted for reuse)
-             */
-            _getWeeksWithData(weeksWindow) {
+             /**
+              * Calculate material weight percentages based on historical consumption
+              */
+             calculateMaterialWeights() {
+                 const weights = new Array(CONFIG.PACK_TYPES.length).fill(0);
+
+                 if (this.weeklyConsumption.length === 0) {
+                     return weights.map(() => 1 / CONFIG.PACK_TYPES.length);
+                 }
+
+                 const totalByMaterial = new Array(CONFIG.PACK_TYPES.length).fill(0);
+                 let grandTotal = 0;
+
+                 for (const row of this.weeklyConsumption) {
+                     for (let i = 2; i < row.length && i - 2 < CONFIG.PACK_TYPES.length; i++) {
+                         const value = Utils.parseNumber(row[i]);
+                         if (value > 0) {
+                             totalByMaterial[i - 2] += value;
+                             grandTotal += value;
+                         }
+                     }
+                 }
+
+                 if (grandTotal === 0) {
+                     return weights.map(() => 1 / CONFIG.PACK_TYPES.length);
+                 }
+
+                 return totalByMaterial.map(total => total / grandTotal);
+             }
+
+             /**
+              * Helper: get weeks with data (extracted for reuse)
+              */
+             _getWeeksWithData(weeksWindow) {
                 const weeksWithData = [];
                 for (let i = this.weeklyConsumption.length - 1; i >= 0 && weeksWithData.length < weeksWindow; i--) {
                     const week = this.weeklyConsumption[i];
@@ -1542,32 +1602,30 @@
              * Add purchase forecast sheet with calculated data
              */
             _addEmptyPurchaseForecastSheet(workbook) {
-                const weeksWindow = Math.min(
-                    parseInt(document.getElementById('maWindow').value) || CONFIG.DEFAULT_MA_WINDOW,
-                    52
-                );
-                const startWeek = parseInt(document.getElementById('startWeek').value) || 1;
-                const forecastWeeks = parseInt(document.getElementById('forecastWeeks').value) || 4;
+                const materialWeights = this.dataManager.calculateMaterialWeights();
+                const salesForecast = this.dataManager.salesForecast;
+                const purchaseOrders = this.dataManager.purchaseOrders;
 
-                const forecast = this.calculator.calculate(weeksWindow, startWeek, forecastWeeks);
+                const data = [];
 
-                const weekHeaders = [];
-                for (let w = 0; w < forecast.numWeeks; w++) {
-                    weekHeaders.push(`Week ${forecast.startWeek + w}`);
-                }
+                data.push(CONFIG.PACK_TYPES.map(p => p.replace(/\n/g, ' ')));
 
-                const data = [
-                    ['', '', ...weekHeaders]
-                ];
+                const forecastRow = [];
+                for (let i = 0; i < CONFIG.PACK_TYPES.length; i++) {
+                    const weight = materialWeights[i] || 0;
+                    let totalForecast = 0;
 
-                for (let packIdx = 0; packIdx < forecast.results.length; packIdx++) {
-                    const row = ['', ''];
-                    for (let w = 0; w < forecast.numWeeks; w++) {
-                        const weekForecast = forecast.weeklyForecasts[w][packIdx];
-                        row.push(Math.round(weekForecast.purchaseAmount || 0));
+                    for (const sale of salesForecast) {
+                        const materialForecast = (sale.quantity || 0) * weight;
+                        totalForecast += materialForecast;
                     }
-                    data.push(row);
+
+                    const purchased = purchaseOrders[i] || 0;
+                    const remaining = Math.max(0, totalForecast - purchased);
+                    forecastRow.push(Math.round(remaining));
                 }
+
+                data.push(forecastRow);
 
                 const sheet = XLSX.utils.aoa_to_sheet(data);
                 XLSX.utils.book_append_sheet(workbook, sheet, 'Прогноз_закупок');
